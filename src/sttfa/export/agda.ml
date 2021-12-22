@@ -13,6 +13,7 @@ let forbidden_id = ref ["abstract";"consructor";"data";"do";"eta-equality";"fiel
                         "record";"renaming";"rexrite";"Set";"syntax";"tactic";"unquote";"unquoteDecl";
                         "unquoteDef";"using";"variable";"where";"with"]
 
+(* sanitize variable names *)
 let sanitize id =
   if id = "_" 
   then id
@@ -24,6 +25,7 @@ let sanitize id =
       let regexp = Str.regexp "_" in
       Str.global_replace regexp "::" id
 
+(* Print variable name *)
 let print_var oc id =
   Format.fprintf oc "%s" (sanitize id)
 
@@ -42,23 +44,26 @@ let print_name oc (md,id) =
   else
     Format.fprintf oc "%s.%s" md id
 
+(* Prints Set->Set...->Set (arity+1 times) *)
 let rec print_arity oc arity =
   if arity = 0 then
     Format.fprintf oc "Set"
   else
     Format.fprintf oc "Set -> %a" print_arity (arity-1)
 
+(* Print monomorphic type _ty *)
 let rec print__ty oc = function
-  | TyVar(var) ->
+  | TyVar(var) ->             (* Type variable *)
     Format.fprintf oc "%a" print_var var
-  | Arrow(_tyl,_tyr) ->
+  | Arrow(_tyl,_tyr) ->       (* Arrow type *)
     Format.fprintf oc "%a -> %a" print__ty_wp _tyl print__ty _tyr
-  | TyOp(tyOp, []) ->
+  | TyOp(tyOp, []) ->         (* Constant type *)
     Format.fprintf oc "%a" print_name tyOp
-  | TyOp(tyOp, _tys) ->
+  | TyOp(tyOp, _tys) ->       (* Type operator *)
     Format.fprintf oc "%a %a" print_name tyOp (print_list " " print__ty) _tys
-  | Prop -> Format.fprintf oc "Set"
+  | Prop -> Format.fprintf oc "Set"  (* Prop is mapped to Set *)
 
+(* print__ty but add brackets when necessary *)
 and print__ty_wp fmt _ty =
   match _ty with
   | TyVar _
@@ -66,6 +71,7 @@ and print__ty_wp fmt _ty =
   | TyOp _ -> print__ty fmt _ty
   | Arrow _ -> Format.fprintf fmt "(%a)" print__ty _ty
 
+(* Print polymorphic type *)
 let rec print_ty oc = function
   | ForallK(var, ty) ->
     Format.fprintf oc "{^k : Level} -> forall (%a : Set ^k) -> %a" print_var var print_ty ty
@@ -74,7 +80,7 @@ let rec print_ty oc = function
 let rec print__te oc = function
   | TeVar(var) ->
     Format.fprintf oc "%a" print_var var
-  | Abs(var,_ty,_te) ->
+  | Abs(var,_ty,_te) ->  (* Difference between forall and abstraction ? .\ doesn't come in proofs *)
     Format.fprintf oc "\\(%a : %a) -> %a" print_var var print__ty_wp _ty print__te _te
   | App(Abs _ as _tel,_ter) ->
     Format.fprintf oc "((%a) %a)" print__te _tel print__te_wp _ter
@@ -84,7 +90,7 @@ let rec print__te oc = function
     Format.fprintf oc "forall (%a : %a) -> %a" print_var var print__ty_wp _ty print__te _te
   | Impl(_tel,_ter) ->
     Format.fprintf oc "%a -> %a" print__te_wp _tel print__te _ter 
-  | AbsTy(var, _te) ->
+  | AbsTy(var, _te) ->  (* Abstraction on type *)
     Format.fprintf oc "\\(%a : Set ^k) -> %a" print_var var print__te _te
   | Cst(cst, []) ->
     Format.fprintf oc "%a" print_name cst
@@ -97,6 +103,7 @@ and print__te_wp fmt _te =
   | Cst(_,[]) -> Format.fprintf fmt "%a" print__te _te
   | _ -> Format.fprintf fmt "(%a)" print__te _te
 
+(* Polymorphic term *)
 let rec print_te oc = function
   | ForallP(var,te) -> (* Can actually be followed by other ForallP *)
     Format.fprintf oc "{^p : Level} -> forall (%a : Set ^p) -> %a" print_var var print_te te 

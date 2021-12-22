@@ -7,16 +7,21 @@ module D = Core.Deps
 (** {b NOTE} underscored types are monomorphic, not underscored are
     polymorphic. *)
 
+(** Type Variable *)
 type ty_var  = string
 
+(** Term Variable *)
 type te_var  = string
 
+(** Hypothesis variable? *)
 type hyp_var = string
 
 type name = string * string
 
+(* Constant? *)
 type cst = name
 
+(** Monomorphic type *)
 type _ty =
   | TyVar of ty_var
   | Arrow of _ty * _ty
@@ -25,10 +30,12 @@ type _ty =
 
 let dummy__ty = TyVar("dummy")
 
+(** Polymorphic type *)
 type ty = ForallK of ty_var * ty | Ty of _ty
 
 let dummy_ty = Ty(dummy__ty)
 
+(* Monomorphic Term *)
 type _te =
   | TeVar of te_var
   | Abs of te_var * _ty * _te
@@ -38,22 +45,27 @@ type _te =
   | AbsTy of ty_var * _te
   | Cst of cst * _ty list
 
+(* Polymorphic term *)
 type te = ForallP of ty_var * te | Te of _te
 
+(** Context's type variables i.e. X list *)
 type ty_ctx = ty_var list
 
+(** Context's term variables i.e. x:A list *)
 type te_ctx = (te_var * _ty) list
 
+(** Term set *)
 module TeSet = Set.Make (struct
   type t = hyp_var * _te
 
   let compare = compare
 end)
 
-type hyp = TeSet.t
+type hyp = TeSet.t (* = hyp_var * _te ;;;;;; and hyp_var = string *)
 
 type judgment = {ty: ty_ctx; te: te_ctx; hyp: hyp; thm: te}
 
+(* What is ctx? *)
 type ctx =
   | CAbs
   | CAppL
@@ -77,6 +89,7 @@ let print_ctx fmt = function
 let print_ctxs fmt ctxs =
   B.pp_list "," print_ctx fmt ctxs
 
+(* What is inside Delta? *)
 type redex = Delta of name * _ty list | Beta of _te
 
 let print_redex oc r =
