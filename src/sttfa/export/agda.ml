@@ -40,7 +40,7 @@ let rec print_list sep pp oc = function
   | x::t -> Format.fprintf oc "(%a)%s%a" pp x sep (print_list sep pp) t
 
 let print_dep oc dep =
-  Format.fprintf oc "open import %s\n" (sanitize dep)
+  Format.fprintf oc "import %s\n" (sanitize dep)
 
 let print_name oc (md,id) =
   let id = sanitize id in
