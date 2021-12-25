@@ -52,3 +52,18 @@ let to_string : t -> string = function
   | Lean       -> "lean"
   | Latex      -> "latex"
   | Agda       -> "agda"
+
+type dir = ToTarget | FromTarget
+let sanitizer : t -> dir -> string -> string =
+  fun sys dir id ->
+    match sys with
+    | Agda -> 
+      let open Str in
+      let repl = [("_", "⎵"); ("bool", "ℬool")] in
+      let repl = if dir = ToTarget then repl else
+      List.map (fun (a,b) -> (b,a)) repl
+      in
+      List.fold_left
+        (fun b (p,r) -> global_replace (regexp p) r b)
+        id repl
+    | _ -> id

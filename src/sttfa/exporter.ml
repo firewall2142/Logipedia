@@ -47,4 +47,5 @@ let get_sttfa_exporter : Systems.t -> (module Export.S) = fun target ->
     let decompile _ = assert false
     let export : ast pp = fun fmt ast->
       export_to_system_as_ast target fmt ast
+    let sanitizer = Systems.sanitizer target
   end)

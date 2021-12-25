@@ -1,29 +1,34 @@
 module D = Core.Deps
 open Ast
 
+(* open Sexplib *)
+
 let sys = "agda"
 
 let cur_md = ref ""
 
 (* no files in arith_fermat are using them but we still might get new files using them in the future *)
-let forbidden_id = ref ["abstract";"consructor";"data";"do";"eta-equality";"field";"forall";"hiding";
+let forbidden_id = ref ["abstract";"constructor";"data";"do";"eta-equality";"field";"forall";"hiding";
                         "import";"in";"inductive";"infix";"infixl";"infixr";"instance";"let";"macro";
                         "module";"mutual";"no-eta-equality";"open";"overlap";"pattern";"postulate";
                         "primitive";"private";"public";"quote";"quoteContext";"quoteGoal";"quoteTerm";
-                        "record";"renaming";"rexrite";"Set";"syntax";"tactic";"unquote";"unquoteDecl";
-                        "unquoteDef";"using";"variable";"where";"with"]
+                        "record";"renaming";"rewrite";"Set";"syntax";"tactic";"unquote";"unquoteDecl";
+                        "unquoteDef";"using";"variable";"where";"with";"bool"]
+
 
 (* sanitize variable names *)
 let sanitize id =
-  if id = "_" 
-  then id
-  else 
-    if List.mem id !forbidden_id
-    then 
-      "dk^"^id
-    else
-      let regexp = Str.regexp "_" in
-      Str.global_replace regexp "::" id
+  Core.Systems.sanitizer Agda ToTarget id
+  (* if id = "_" then id else
+  let id = if id = "bool" then "ℬool" else id in
+  let id = if List.mem id !forbidden_id 
+    then "dk^"^id else id
+  in
+  let open Str in
+  let old_id = id in
+  let id = global_replace (regexp "_") "∷" id in
+  if (id <> old_id) then Format.printf "changed '%s' to '%s'\n" old_id id else ();
+  id *)
 
 (* Print variable name *)
 let print_var oc id =
@@ -35,14 +40,14 @@ let rec print_list sep pp oc = function
   | x::t -> Format.fprintf oc "(%a)%s%a" pp x sep (print_list sep pp) t
 
 let print_dep oc dep =
-  Format.fprintf oc "open import %s\n" dep
+  Format.fprintf oc "open import %s\n" (sanitize dep)
 
 let print_name oc (md,id) =
   let id = sanitize id in
   if !cur_md = md then
     Format.fprintf oc "%s" id
   else
-    Format.fprintf oc "%s.%s" md id
+    Format.fprintf oc "%s.%s" (sanitize md) id
 
 (* Prints Set->Set...->Set (arity+1 times) *)
 let rec print_arity oc arity =
@@ -141,16 +146,37 @@ let print_item oc = function
   | Theorem(name,_,proof) ->
     Format.fprintf oc "%a : _@.%a = %a@.@." print_name name print_name name print_proof proof
   | TypeDecl(tyop,arity) ->
-    Format.fprintf oc "%a : %a@." print_name tyop print_arity arity
+    Format.fprintf oc "data %a : %a where@." print_name tyop print_arity arity
   | TypeDef (name,_,_) ->
     Format.fprintf oc "-- Type definition (for %a) not handled right now@." print_name name
 
 (* Agda.Primitive needed for Level *)
+(* Main function here *)
 let print_ast : Format.formatter -> ?mdeps:Ast.mdeps -> Ast.ast -> unit = fun fmt ?mdeps:_ ast ->
   cur_md := ast.md;
-  Format.fprintf fmt "module %s where\nopen import Agda.Primitive\n" !cur_md;
+  (* let rec sexp_printer indent ppf = function
+  | Sexp.Atom "" | Sexp.List [] -> ()
+  | Sexp.Atom s -> Format.fprintf ppf "\n%s|-%s" (String.make indent ' ') s
+  | Sexp.List (hd :: tl) -> 
+    Format.fprintf ppf "%a%a"
+      (sexp_printer indent) hd
+      (sexp_tail_printer (indent+2)) tl
+  and sexp_tail_printer indent ppf = function
+  | [] -> ()
+  | x :: tl -> 
+    Format.fprintf ppf "%a\n%a" 
+      (sexp_printer indent) x (sexp_tail_printer indent) tl
+  in
+  let outfmt = Format.std_formatter in
+  Format.fprintf outfmt "=============[[[START]]] : %s ===========\n" ast.md;
+  let margin = Format.pp_get_margin outfmt () in
+  Format.pp_set_margin outfmt 100000; Format.pp_open_vbox outfmt 2;
+  List.iter (fun x -> sexp_of_item x |> sexp_printer 0 outfmt) ast.items;
+  Format.pp_close_box outfmt (); Format.pp_set_margin outfmt margin; *)
+  Format.fprintf fmt "module %s where\nopen import Agda.Primitive\n" (sanitize !cur_md);
   D.QSet.iter (print_dep fmt) ast.dep;
   List.iter (print_item fmt) ast.items
+  (* Format.fprintf outfmt "=============[[[ENDOF]]] : %s ===========\n" ast.md *)
 
 (*
 let print_meta_ast fmt meta_ast =
@@ -166,13 +192,18 @@ let to_string fmt = Format.asprintf "%a" fmt
 (* TODO : update it according to print_item *)
 let string_of_item = function
   | Parameter((_,id),ty) ->
+    let id = sanitize id in
     Format.asprintf "postulate %s : %a" id print_ty ty
   | Definition((_,id),ty,te) ->
+    let id = sanitize id in
     Format.asprintf "%s : %a@.%s = %a" id print_ty ty id print_te te 
   | Axiom((_,id),te) ->
+    let id = sanitize id in
     Format.asprintf "postulate %s : %a" id print_te te
   | Theorem((_,id),te,_) ->
+    let id = sanitize id in
     Format.asprintf "%s : %a" id print_te te
   | TypeDecl((_,id),arity) ->
+    let id = sanitize id in
     Format.asprintf "%s : %a" id print_arity arity
   | TypeDef _ -> failwith "[AGDA] Type definitions not handled right now" 

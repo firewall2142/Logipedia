@@ -23,6 +23,8 @@ sig
   val export : ast pp
   (** [export fmt ast] exports abstract syntax tree [ast] to formatter
       [fmt] in the syntax of the system. *)
+  
+  val sanitizer : Systems.dir -> string -> string
 end
 
 module GenBuildSys (E:S) : Makefile.S = struct
@@ -41,13 +43,13 @@ module GenBuildSys (E:S) : Makefile.S = struct
 
   let file_ext = List.assoc E.target Systems.exts
 
-  let mk_target f = (Option.get !Cli.outdir) </> !/f <.> file_ext
+  let mk_target f = (Option.get !Cli.outdir) </> (E.sanitizer ToTarget !/f) <.> file_ext (* Replace file extension to make targetpp*)
 
   let mk_generators : string -> (DkTools.Mident.t -> DkTools.entry list pp) ->
     (Key.t, Value.t) generator list = fun ext entries_pp ->
     let sysrule = function
       | Key.File(p) when Filename.extension p = ext ->
-        let srcmd = dk_of p |> Api.Env.Default.init in
+        let srcmd = dk_of @@ E.sanitizer FromTarget p |> Api.Env.Default.init in (* @firewall2142 dk_of gets the coresponding file of required .agda ?*)
         Some(Rule.entry_printer p entries_pp srcmd)
       | _                                           -> None
     in

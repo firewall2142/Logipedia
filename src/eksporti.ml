@@ -83,6 +83,11 @@ Available options for the selected mode:"
         | Error(key) -> Format.printf "No rule to make %a@." M.pp_key key
       in
       M.want files |> List.iter build
+      (* @firewall2142
+        [M.want files] tells what files are wanted. It is calculated by replacing
+        the extensions of .dk to .[file_ext]
+        [build] then uses generators which uses the function dk_of to do the
+        same thing. *)
   with
   | Arg.Bad(s) ->
     Format.printf "%s\n" s;

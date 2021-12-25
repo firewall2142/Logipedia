@@ -31,7 +31,7 @@ fi
 setup "$thy" "$pkg"
 
 # Use relative paths for ocaml
-out="${root}/export/${exp}"
+out="${root}/export/${exp}/${pkg}"
 thdir="${root}/theories/${thy}"
 srcdir="${root}/import/dedukti/${thy}/${pkg}"
 middleware=${mid:-"$thy"}

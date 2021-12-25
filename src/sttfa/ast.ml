@@ -4,22 +4,29 @@
 module B = Kernel.Basic
 module D = Core.Deps
 
+open Sexplib.Std (* newly essential import *)
+
 (** {b NOTE} underscored types are monomorphic, not underscored are
     polymorphic. *)
 
 (** Type Variable *)
 type ty_var  = string
+[@@deriving sexp]
 
 (** Term Variable *)
 type te_var  = string
+[@@deriving sexp]
 
 (** Hypothesis variable? *)
 type hyp_var = string
+[@@deriving sexp]
 
 type name = string * string
+[@@deriving sexp]
 
 (* Constant? *)
 type cst = name
+[@@deriving sexp]
 
 (** Monomorphic type *)
 type _ty =
@@ -27,11 +34,13 @@ type _ty =
   | Arrow of _ty * _ty
   | TyOp of name * _ty list
   | Prop
+[@@deriving sexp]
 
 let dummy__ty = TyVar("dummy")
 
 (** Polymorphic type *)
 type ty = ForallK of ty_var * ty | Ty of _ty
+[@@deriving sexp]
 
 let dummy_ty = Ty(dummy__ty)
 
@@ -44,26 +53,34 @@ type _te =
   | Impl of _te * _te
   | AbsTy of ty_var * _te
   | Cst of cst * _ty list
+[@@deriving sexp]
+
 
 (* Polymorphic term *)
 type te = ForallP of ty_var * te | Te of _te
+[@@deriving sexp]
 
 (** Context's type variables i.e. X list *)
 type ty_ctx = ty_var list
+[@@deriving sexp]
 
 (** Context's term variables i.e. x:A list *)
 type te_ctx = (te_var * _ty) list
+[@@deriving sexp]
 
 (** Term set *)
 module TeSet = Set.Make (struct
   type t = hyp_var * _te
+  [@@deriving sexp]
 
   let compare = compare
 end)
 
-type hyp = TeSet.t (* = hyp_var * _te ;;;;;; and hyp_var = string *)
+type hyp = TeSet.t [@sexp.opaque](* = hyp_var * _te ;;;;;; and hyp_var = string *)
+[@@deriving sexp]
 
 type judgment = {ty: ty_ctx; te: te_ctx; hyp: hyp; thm: te}
+[@@deriving sexp]
 
 (* What is ctx? *)
 type ctx =
@@ -75,6 +92,7 @@ type ctx =
   | CImplR
   | CAbsTy
   | CForallP
+[@@deriving sexp]
 
 let print_ctx fmt = function
   | CAbs     -> Format.fprintf fmt "CAbs"
@@ -85,12 +103,14 @@ let print_ctx fmt = function
   | CImplR   -> Format.fprintf fmt "CImplR"
   | CAbsTy   -> Format.fprintf fmt "CAbsTy"
   | CForallP -> Format.fprintf fmt "CForallP"
+[@@deriving sexp]
 
 let print_ctxs fmt ctxs =
   B.pp_list "," print_ctx fmt ctxs
 
 (* What is inside Delta? *)
 type redex = Delta of name * _ty list | Beta of _te
+[@@deriving sexp]
 
 let print_redex oc r =
   match r with
@@ -98,8 +118,10 @@ let print_redex oc r =
   | Beta _ -> Format.fprintf oc "beta"
 
 type rewrite_seq = (redex * ctx list) list
+[@@deriving sexp]
 
 type trace = {left: rewrite_seq; right: rewrite_seq}
+[@@deriving sexp]
 
 let print_rewrite_ctx oc (rw,ctxs) =
   Format.fprintf oc "unfold %a at %a;@." print_redex rw print_ctxs ctxs
@@ -120,8 +142,10 @@ type proof =
   | ForallI of judgment * proof * te_var
   | ForallPE of judgment * proof * _ty
   | ForallPI of judgment * proof * ty_var
+[@@deriving sexp]
 
 type arity = int
+[@@deriving sexp]
 
 type item =
   | Parameter of name * ty
@@ -130,6 +154,7 @@ type item =
   | Theorem of name * te * proof
   | TypeDecl of name * arity
   | TypeDef of name * ty_var list * _ty
+[@@deriving sexp]
 
 type kind = [`Parameter | `Definition | `Axiom | `Theorem | `TypeDecl | `TypeDef ]
 

@@ -147,6 +147,7 @@ let get_exporter target : (module Export.S) = match target with
         let compile _ _ = ()
         let decompile _ = assert false
         let export _ () = ()
+        let sanitizer = Systems.sanitizer target
       end)
   | sys -> Console.exit_with
              "Encoding cupicef doesn't support target: %s" (Systems.to_string sys)
