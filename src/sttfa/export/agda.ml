@@ -13,7 +13,7 @@ let forbidden_id = ref ["abstract";"constructor";"data";"do";"eta-equality";"fie
                         "module";"mutual";"no-eta-equality";"open";"overlap";"pattern";"postulate";
                         "primitive";"private";"public";"quote";"quoteContext";"quoteGoal";"quoteTerm";
                         "record";"renaming";"rewrite";"Set";"syntax";"tactic";"unquote";"unquoteDecl";
-                        "unquoteDef";"using";"variable";"where";"with";"bool"]
+                        "unquoteDef";"using";"variable";"where";"with"]
 
 
 (* sanitize variable names *)
