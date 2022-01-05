@@ -19,16 +19,6 @@ let forbidden_id = ref ["abstract";"constructor";"data";"do";"eta-equality";"fie
 (* sanitize variable names *)
 let sanitize id =
   Core.Systems.sanitizer Agda ToTarget id
-  (* if id = "_" then id else
-  let id = if id = "bool" then "ℬool" else id in
-  let id = if List.mem id !forbidden_id 
-    then "dk^"^id else id
-  in
-  let open Str in
-  let old_id = id in
-  let id = global_replace (regexp "_") "∷" id in
-  if (id <> old_id) then Format.printf "changed '%s' to '%s'\n" old_id id else ();
-  id *)
 
 (* Print variable name *)
 let print_var oc id =

@@ -36,7 +36,7 @@ let exts : (t * string) list =
   ; ( Lean      , "lean" )
   ; ( Hollight  , "ml"   )
   ; ( Latex     , "tex"  )
-  ; ( Agda      , "agda"  ) ]
+  ; ( Agda      , "agda" ) ]
 
 (** [of_string str] returns the system associated to the string [str]. *)
 let of_string : string -> t = fun s ->
@@ -61,7 +61,7 @@ let sanitizer : t -> dir -> string -> string =
       let open Str in
       let repl = [("_", "⎵")] in
       let repl = if dir = ToTarget then repl else
-      List.map (fun (a,b) -> (b,a)) repl
+        List.map (fun (a,b) -> (b,a)) repl
       in
       List.fold_left
         (fun b (p,r) -> global_replace (regexp p) r b)
