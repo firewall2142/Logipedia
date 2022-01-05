@@ -14,11 +14,9 @@ let forbidden_id = ref ["abstract";"constructor";"data";"do";"eta-equality";"fie
                         "unquoteDef";"using";"variable";"where";"with"]
 
 
-(* sanitize variable names *)
 let sanitize id =
   Core.Systems.sanitizer Agda ToTarget id
 
-(* Print variable name *)
 let print_var oc id =
   Format.fprintf oc "%s" (sanitize id)
 
