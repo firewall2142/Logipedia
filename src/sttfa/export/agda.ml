@@ -1,8 +1,6 @@
 module D = Core.Deps
 open Ast
 
-(* open Sexplib *)
-
 let sys = "agda"
 
 let cur_md = ref ""
@@ -39,26 +37,23 @@ let print_name oc (md,id) =
   else
     Format.fprintf oc "%s.%s" (sanitize md) id
 
-(* Prints Set->Set...->Set (arity+1 times) *)
 let rec print_arity oc arity =
   if arity = 0 then
     Format.fprintf oc "Set"
   else
     Format.fprintf oc "Set -> %a" print_arity (arity-1)
 
-(* Print monomorphic type _ty *)
 let rec print__ty oc = function
-  | TyVar(var) ->             (* Type variable *)
+  | TyVar(var) ->
     Format.fprintf oc "%a" print_var var
-  | Arrow(_tyl,_tyr) ->       (* Arrow type *)
+  | Arrow(_tyl,_tyr) ->
     Format.fprintf oc "%a -> %a" print__ty_wp _tyl print__ty _tyr
-  | TyOp(tyOp, []) ->         (* Constant type *)
+  | TyOp(tyOp, []) ->
     Format.fprintf oc "%a" print_name tyOp
-  | TyOp(tyOp, _tys) ->       (* Type operator *)
+  | TyOp(tyOp, _tys) ->
     Format.fprintf oc "%a %a" print_name tyOp (print_list " " print__ty) _tys
-  | Prop -> Format.fprintf oc "Set"  (* Prop is mapped to Set *)
+  | Prop -> Format.fprintf oc "Set"
 
-(* print__ty but add brackets when necessary *)
 and print__ty_wp fmt _ty =
   match _ty with
   | TyVar _
@@ -66,7 +61,6 @@ and print__ty_wp fmt _ty =
   | TyOp _ -> print__ty fmt _ty
   | Arrow _ -> Format.fprintf fmt "(%a)" print__ty _ty
 
-(* Print polymorphic type *)
 let rec print_ty oc = function
   | ForallK(var, ty) ->
     Format.fprintf oc "{^k : Level} -> forall (%a : Set ^k) -> %a" print_var var print_ty ty
@@ -75,7 +69,7 @@ let rec print_ty oc = function
 let rec print__te oc = function
   | TeVar(var) ->
     Format.fprintf oc "%a" print_var var
-  | Abs(var,_ty,_te) ->  (* Difference between forall and abstraction ? .\ doesn't come in proofs *)
+  | Abs(var,_ty,_te) ->
     Format.fprintf oc "\\(%a : %a) -> %a" print_var var print__ty_wp _ty print__te _te
   | App(Abs _ as _tel,_ter) ->
     Format.fprintf oc "((%a) %a)" print__te _tel print__te_wp _ter
@@ -85,7 +79,7 @@ let rec print__te oc = function
     Format.fprintf oc "forall (%a : %a) -> %a" print_var var print__ty_wp _ty print__te _te
   | Impl(_tel,_ter) ->
     Format.fprintf oc "%a -> %a" print__te_wp _tel print__te _ter 
-  | AbsTy(var, _te) ->  (* Abstraction on type *)
+  | AbsTy(var, _te) ->
     Format.fprintf oc "\\(%a : Set ^k) -> %a" print_var var print__te _te
   | Cst(cst, []) ->
     Format.fprintf oc "%a" print_name cst
@@ -98,7 +92,6 @@ and print__te_wp fmt _te =
   | Cst(_,[]) -> Format.fprintf fmt "%a" print__te _te
   | _ -> Format.fprintf fmt "(%a)" print__te _te
 
-(* Polymorphic term *)
 let rec print_te oc = function
   | ForallP(var,te) -> (* Can actually be followed by other ForallP *)
     Format.fprintf oc "{^p : Level} -> forall (%a : Set ^p) -> %a" print_var var print_te te 
@@ -141,32 +134,11 @@ let print_item oc = function
     Format.fprintf oc "-- Type definition (for %a) not handled right now@." print_name name
 
 (* Agda.Primitive needed for Level *)
-(* Main function here *)
 let print_ast : Format.formatter -> ?mdeps:Ast.mdeps -> Ast.ast -> unit = fun fmt ?mdeps:_ ast ->
   cur_md := ast.md;
-  (* let rec sexp_printer indent ppf = function
-  | Sexp.Atom "" | Sexp.List [] -> ()
-  | Sexp.Atom s -> Format.fprintf ppf "\n%s|-%s" (String.make indent ' ') s
-  | Sexp.List (hd :: tl) -> 
-    Format.fprintf ppf "%a%a"
-      (sexp_printer indent) hd
-      (sexp_tail_printer (indent+2)) tl
-  and sexp_tail_printer indent ppf = function
-  | [] -> ()
-  | x :: tl -> 
-    Format.fprintf ppf "%a\n%a" 
-      (sexp_printer indent) x (sexp_tail_printer indent) tl
-  in
-  let outfmt = Format.std_formatter in
-  Format.fprintf outfmt "=============[[[START]]] : %s ===========\n" ast.md;
-  let margin = Format.pp_get_margin outfmt () in
-  Format.pp_set_margin outfmt 100000; Format.pp_open_vbox outfmt 2;
-  List.iter (fun x -> sexp_of_item x |> sexp_printer 0 outfmt) ast.items;
-  Format.pp_close_box outfmt (); Format.pp_set_margin outfmt margin; *)
   Format.fprintf fmt "module %s where\nopen import Agda.Primitive\n" (sanitize !cur_md);
   D.QSet.iter (print_dep fmt) ast.dep;
   List.iter (print_item fmt) ast.items
-  (* Format.fprintf outfmt "=============[[[ENDOF]]] : %s ===========\n" ast.md *)
 
 (*
 let print_meta_ast fmt meta_ast =
