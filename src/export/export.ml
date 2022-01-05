@@ -43,13 +43,13 @@ module GenBuildSys (E:S) : Makefile.S = struct
 
   let file_ext = List.assoc E.target Systems.exts
 
-  let mk_target f = (Option.get !Cli.outdir) </> (E.sanitizer ToTarget !/f) <.> file_ext (* Replace file extension to make targetpp*)
+  let mk_target f = (Option.get !Cli.outdir) </> (E.sanitizer ToTarget !/f) <.> file_ext
 
   let mk_generators : string -> (DkTools.Mident.t -> DkTools.entry list pp) ->
     (Key.t, Value.t) generator list = fun ext entries_pp ->
     let sysrule = function
       | Key.File(p) when Filename.extension p = ext ->
-        let srcmd = dk_of @@ E.sanitizer FromTarget p |> Api.Env.Default.init in (* @firewall2142 dk_of gets the coresponding file of required .agda ?*)
+        let srcmd = dk_of @@ E.sanitizer FromTarget p |> Api.Env.Default.init in
         Some(Rule.entry_printer p entries_pp srcmd)
       | _                                           -> None
     in
