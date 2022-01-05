@@ -38,7 +38,6 @@ type _te =
   | AbsTy of ty_var * _te
   | Cst of cst * _ty list
 
-
 type te = ForallP of ty_var * te | Te of _te
 
 type ty_ctx = ty_var list
@@ -47,7 +46,6 @@ type te_ctx = (te_var * _ty) list
 
 module TeSet = Set.Make (struct
   type t = hyp_var * _te
-  [@@deriving sexp]
 
   let compare = compare
 end)
