@@ -118,14 +118,14 @@ let print_item oc = function
     Format.fprintf oc "postulate %a : %a@." print_name name print_ty ty
   | Definition(name,ForallK(_,_),te) ->
     Format.fprintf oc "%a : {^k : Level} -> _@.%a {^k} = %a@.@." print_name name print_name name print_te te
-  | Definition(name,_,te) ->
-    Format.fprintf oc "%a : _@.%a = %a@.@." print_name name print_name name print_te te
+  | Definition(name,ty,te) ->
+    Format.fprintf oc "%a : %a@.%a = %a@.@." print_name name print_ty ty print_name name print_te te
   | Axiom (name,te) ->
     Format.fprintf oc "postulate %a : %a@." print_name name print_te te 
   | Theorem(name,ForallP(_,_),proof) ->
     Format.fprintf oc "%a : {^p : Level} -> _@.%a {^p} = %a@.@." print_name name print_name name print_proof proof
-  | Theorem(name,_,proof) ->
-    Format.fprintf oc "%a : _@.%a = %a@.@." print_name name print_name name print_proof proof
+  | Theorem(name,te,proof) ->
+    Format.fprintf oc "%a : %a@.%a = %a@.@." print_name name print_te te print_name name print_proof proof
   | TypeDecl(tyop,arity) ->
     Format.fprintf oc "data %a : %a where@." print_name tyop print_arity arity
   | TypeDef (name,_,_) ->

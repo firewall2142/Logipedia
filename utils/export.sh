@@ -49,6 +49,7 @@ middleware=${mid:-"$thy"}
      --matita "export/matita"\
      --agda "export/agda"
  else
+   OCAMLRUNPARAM='b' \
    dune exec -- eksporti "$exp" -I "$thdir" -I "$srcdir" -o "$out"\
      -d "$srcdir" -m "$middleware"
  fi)
