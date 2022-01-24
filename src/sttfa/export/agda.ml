@@ -61,7 +61,7 @@ and print__ty_wp fmt _ty =
 
 let rec print_ty oc = function
   | ForallK(var, ty) ->
-    Format.fprintf oc "{^k : Level} -> forall (%a : Set ^k) -> %a" print_var var print_ty ty
+    Format.fprintf oc "(%a : Set) -> %a" print_var var print_ty ty
   | Ty(_ty) -> print__ty oc _ty
 
 let rec print__te oc = function
@@ -78,7 +78,7 @@ let rec print__te oc = function
   | Impl(_tel,_ter) ->
     Format.fprintf oc "%a -> %a" print__te_wp _tel print__te _ter 
   | AbsTy(var, _te) ->
-    Format.fprintf oc "\\(%a : Set ^k) -> %a" print_var var print__te _te
+    Format.fprintf oc "\\(%a : Set) -> %a" print_var var print__te _te
   | Cst(cst, []) ->
     Format.fprintf oc "%a" print_name cst
   | Cst(cst, _tys) ->
@@ -92,7 +92,7 @@ and print__te_wp fmt _te =
 
 let rec print_te oc = function
   | ForallP(var,te) -> (* Can actually be followed by other ForallP *)
-    Format.fprintf oc "{^p : Level} -> forall (%a : Set ^p) -> %a" print_var var print_te te 
+    Format.fprintf oc "(%a : Set) -> %a" print_var var print_te te 
   | Te(_te) -> print__te oc _te
 
 let rec print_proof oc = function 
@@ -111,19 +111,23 @@ let rec print_proof oc = function
     Format.fprintf oc "\\(%a : %a) -> %a" print_var var print__ty _ty print_proof proof
   | ForallPE(_,proof,_ty) -> Format.fprintf oc "(%a) (%a)" print_proof proof print__ty _ty
   | ForallPI(_,proof,var) ->
-    Format.fprintf oc "\\(%a : Set ^p) -> %a" print_var var print_proof proof
+    Format.fprintf oc "\\(%a : Set) -> %a" print_var var print_proof proof
 
 let print_item oc = function
   | Parameter(name,ty) ->
     Format.fprintf oc "postulate %a : %a@." print_name name print_ty ty
-  | Definition(name,ForallK(_,_),te) ->
-    Format.fprintf oc "%a : {^k : Level} -> _@.%a {^k} = %a@.@." print_name name print_name name print_te te
+  | Definition(name,ForallK(tyvar,ty),te) ->
+    let ty = ForallK(tyvar,ty) in
+    Format.fprintf oc "%a : %a@.%a = %a@.@." 
+      print_name name print_ty ty print_name name print_te te
   | Definition(name,ty,te) ->
     Format.fprintf oc "%a : %a@.%a = %a@.@." print_name name print_ty ty print_name name print_te te
   | Axiom (name,te) ->
     Format.fprintf oc "postulate %a : %a@." print_name name print_te te 
-  | Theorem(name,ForallP(_,_),proof) ->
-    Format.fprintf oc "%a : {^p : Level} -> _@.%a {^p} = %a@.@." print_name name print_name name print_proof proof
+  | Theorem(name,ForallP(hyv,te),proof) ->
+    let te = ForallP(hyv,te) in
+    Format.fprintf oc "%a : %a@.%a = %a@.@." 
+      print_name name print_te te print_name name print_proof proof
   | Theorem(name,te,proof) ->
     Format.fprintf oc "%a : %a@.%a = %a@.@." print_name name print_te te print_name name print_proof proof
   | TypeDecl(tyop,arity) ->
