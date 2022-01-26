@@ -59,7 +59,7 @@ let sanitizer : t -> dir -> string -> string =
     match sys with
     | Agda -> 
       let open Str in
-      let repl = [("_", "⎵")] in
+      let repl = [("_", "::")] in
       let repl = if dir = ToTarget then repl else
         List.map (fun (a,b) -> (b,a)) repl
       in
