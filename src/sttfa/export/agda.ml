@@ -118,17 +118,36 @@ let print_poly_te oc te =
   let testr = Format.asprintf "%a" print_te te in
   Format.fprintf oc "%a%s" pp_unipoly () testr
 
+
+let rec printi__ty oc = function
+  | TyVar(var) ->
+    Format.fprintf oc "%a" print_var var
+  | Arrow(_tyl,_tyr) ->
+    Format.fprintf oc "%a -> %a" printi__ty_wp _tyl printi__ty _tyr
+  | TyOp(tyOp, []) ->
+    Format.fprintf oc "%a" print_name tyOp
+  | TyOp(tyOp, _tys) ->
+    Format.fprintf oc "%a %a" print_name tyOp (print_list " " printi__ty) _tys
+  | Prop -> Format.fprintf oc "_" 
+
+and printi__ty_wp fmt _ty =
+  match _ty with
+  | TyVar _
+  | Prop
+  | TyOp _ -> printi__ty fmt _ty
+  | Arrow _ -> Format.fprintf fmt "(%a)" printi__ty _ty
+
 let rec printi__te oc = function
   | TeVar(var) ->
     Format.fprintf oc "%a" print_var var
   | Abs(var,_ty,_te) ->
-    Format.fprintf oc "λ(%a : _) -> %a" print_var var print__te _te
+    Format.fprintf oc "λ(%a : %a) -> %a" print_var var printi__ty_wp _ty printi__te _te
   | App(Abs _ as _tel,_ter) ->
     Format.fprintf oc "((%a) %a)" printi__te _tel printi__te_wp _ter
   | App(_tel,_ter) ->
     Format.fprintf oc "%a %a" printi__te _tel printi__te_wp _ter
   | Forall(var,_ty,_te) ->
-    Format.fprintf oc "forall (%a : _) -> %a" print_var var printi__te _te
+    Format.fprintf oc "forall (%a : %a) -> %a" print_var var printi__ty_wp _ty printi__te _te
   | Impl(_tel,_ter) ->
     Format.fprintf oc "%a -> %a" printi__te_wp _tel printi__te _ter 
   | AbsTy(var, _te) ->
@@ -136,8 +155,7 @@ let rec printi__te oc = function
   | Cst(cst, []) ->
     Format.fprintf oc "%a" print_name cst
   | Cst(cst, _tys) ->
-    (* Format.printf "printing constant %a\n" print_name cst; *)
-    Format.fprintf oc "%a _" print_name cst (*(print_list " " print__ty) _tys *)
+    Format.fprintf oc "%a %a" print_name cst (print_list " " printi__ty) _tys
 
 and printi__te_wp fmt _te =
   match _te with
