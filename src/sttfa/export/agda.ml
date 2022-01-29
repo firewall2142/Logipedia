@@ -15,6 +15,10 @@ let forbidden_id = ref ["abstract";"constructor";"data";"do";"eta-equality";"fie
 
 let unicnt = ref 0
 
+let pp_list pp_item oc =
+  let pp_sep oc () = Format.fprintf oc " " in
+  Format.fprintf oc "%a" (Format.pp_print_list ~pp_sep pp_item)
+
 let pp_level oc () = 
   incr unicnt;
   Format.fprintf oc "l%d" !unicnt
@@ -24,10 +28,16 @@ let pp_unipoly oc () =
   begin
   let unis = List.init !unicnt succ in
   unicnt := 0;
-  let pp_sep oc () = Format.fprintf oc " " in
   let pp_item oc = Format.fprintf oc "l%d" in
-  Format.(fprintf oc "{%a : Level} -> " (pp_print_list ~pp_sep pp_item) unis)
+  Format.fprintf oc "{%a : Level} -> " (pp_list pp_item) unis
   end
+
+let unipoly_strs () =
+  let unis = !unicnt in
+  let pp_item oc = Format.fprintf oc "{l%d}" in
+  let forall = Format.asprintf "%a" pp_unipoly () in
+  let levels = Format.asprintf "%a" (pp_list pp_item) (List.init unis succ) in
+  (forall, levels)
 
 let sanitize id =
   Core.Systems.sanitizer Agda ToTarget id
@@ -170,40 +180,49 @@ let rec printi_te oc = function
 
 
 let rec print_proof oc = function 
-  | Assume(_,var) -> Format.fprintf oc "%a" print_var var
-  | Lemma(name,_) -> Format.fprintf oc "%a" print_name name
-  | Conv(_,proof,_) -> Format.fprintf oc "%a" print_proof proof
-  | ImplE(_,left,right) -> Format.fprintf oc "(%a) (%a)" print_proof left print_proof right
-  | ImplI(_,proof,var) ->
-    let j' = judgment_of proof in
-    let _,_te = TeSet.choose (TeSet.filter (fun (x,_) -> if x = var then true else false) j'.hyp) in
-    Format.fprintf oc "λ(%a : _) -> (%a)" print_var var print_proof proof
-  | ForallE(_,proof,_te) -> Format.fprintf oc "(%a) (%a)" print_proof proof printi__te _te
-  | ForallI(_,proof,var) ->
-    let j' = judgment_of proof in
-    let _,_ty = List.find (fun (x,_) -> x = var) j'.te in
-    Format.fprintf oc "λ(%a : _) -> %a" print_var var print_proof proof
-  | ForallPE(_,proof,_ty) -> Format.fprintf oc "(%a) (%a)" print_proof proof print__ty _ty
-  | ForallPI(_,proof,var) ->
-    Format.fprintf oc "λ(%a : _) -> %a" print_var var print_proof proof
+| Assume(_,var) -> Format.fprintf oc "%a" print_var var
+| Lemma(name,_) -> Format.fprintf oc "%a" print_name name
+| Conv(_,proof,_) -> Format.fprintf oc "%a" print_proof proof
+| ImplE(_,left,right) -> Format.fprintf oc "(%a) (%a)" print_proof left print_proof right
+| ImplI(_,proof,var) ->
+  let j' = judgment_of proof in
+  let _,_te = TeSet.choose (TeSet.filter (fun (x,_) -> if x = var then true else false) j'.hyp) in
+  Format.fprintf oc "λ(%a : %a) -> (%a)" print_var var print__te _te print_proof proof
+| ForallE(_,proof,_te) -> Format.fprintf oc "(%a) (%a)" print_proof proof print__te _te
+| ForallI(_,proof,var) ->
+  let j' = judgment_of proof in
+  let _,_ty = List.find (fun (x,_) -> x = var) j'.te in
+  Format.fprintf oc "λ(%a : %a) -> %a" print_var var print__ty _ty print_proof proof
+| ForallPE(_,proof,_ty) -> Format.fprintf oc "(%a) (%a)" print_proof proof print__ty _ty
+| ForallPI(_,proof,var) ->
+  Format.fprintf oc "λ(%a : Set %a) -> %a" print_var var pp_level () print_proof proof
+
 
 let print_item oc = function
   | Parameter(name,ty) ->
-    Format.fprintf oc "postulate %a : %a@." print_name name print_poly_ty ty
-  | Definition(name,ForallK(tyvar,ty),te) ->
-    let ty = ForallK(tyvar,ty) in
-    Format.fprintf oc "%a : %a@.%a = %a@.@." 
-      print_name name print_poly_ty ty print_name name printi_te te
-  | Definition(name,ty,te) ->
-    Format.fprintf oc "%a : %a@.%a = %a@.@." print_name name print_poly_ty ty print_name name printi_te te
+    Format.fprintf oc "postulate %a : %a@.@." print_name name print_poly_ty ty
+  | Definition(name,ForallK(_,_),te) ->
+    let testr = Format.asprintf "%a" print_te te in
+    let (fa, intro) = unipoly_strs () in
+    Format.fprintf oc "%a : %s _@.%a %s = %s@.@." 
+      print_name name fa print_name name intro testr
+  | Definition(name,_,te) ->
+    let testr = Format.asprintf "%a" print_te te in
+    let (fa, intro) = unipoly_strs () in
+    Format.fprintf oc "%a : %s _@.%a %s = %s@.@." 
+      print_name name fa print_name name intro testr
   | Axiom (name,te) ->
-    Format.fprintf oc "postulate %a : %a@." print_name name print_poly_te te 
-  | Theorem(name,ForallP(hyv,te),proof) ->
-    let te = ForallP(hyv,te) in
-    Format.fprintf oc "%a : %a@.%a = %a@.@." 
-      print_name name print_poly_te te print_name name print_proof proof
-  | Theorem(name,te,proof) ->
-    Format.fprintf oc "%a : %a@.%a = %a@.@." print_name name print_poly_te te print_name name print_proof proof
+    Format.fprintf oc "postulate %a : %a@.@." print_name name print_poly_te te 
+  | Theorem(name,ForallP(_,_),proof) ->
+    let prfstr = Format.asprintf "%a" print_proof proof in
+    let (fa, intro) = unipoly_strs () in
+    Format.fprintf oc "%a : %s_@.%a %s = %s@.@." 
+      print_name name fa print_name name intro prfstr
+  | Theorem(name,_,proof) ->
+    let prfstr = Format.asprintf "%a" print_proof proof in
+    let (fa, intro) = unipoly_strs () in
+    Format.fprintf oc "%a : %s_@.%a %s = %s@.@."
+      print_name name fa print_name name intro prfstr
   | TypeDecl(tyop,arity) ->
     Format.fprintf oc "data %a : %a where@." print_name tyop print_arity arity
   | TypeDef (name,_,_) ->
